@@ -1,14 +1,33 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NDAForm from "@/components/NDAForm";
 import NDAPreview from "@/components/NDAPreview";
 import { defaultFormData, NDAFormData } from "@/lib/nda";
 
 export default function Home() {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [formData, setFormData] = useState<NDAFormData>(defaultFormData);
   const [isGenerating, setIsGenerating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("prelegal_user");
+    if (!stored) {
+      router.replace("/login");
+    } else {
+      setUserEmail(stored);
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("prelegal_user");
+    router.push("/login");
+  };
 
   const downloadPDF = async () => {
     if (!previewRef.current) return;
@@ -61,6 +80,14 @@ export default function Home() {
     }
   };
 
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
       {/* Header */}
@@ -84,11 +111,21 @@ export default function Home() {
           </div>
         </div>
 
-        <button
-          onClick={downloadPDF}
-          disabled={isGenerating}
-          className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-navy-900 font-semibold text-sm px-5 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <div className="flex items-center gap-4">
+          {userEmail && (
+            <span className="text-sm text-blue-300 hidden sm:block">{userEmail}</span>
+          )}
+          <button
+            onClick={handleSignOut}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Sign out
+          </button>
+          <button
+            onClick={downloadPDF}
+            disabled={isGenerating}
+            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-navy-900 font-semibold text-sm px-5 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
           {isGenerating ? (
             <>
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -105,7 +142,8 @@ export default function Home() {
               Download PDF
             </>
           )}
-        </button>
+          </button>
+        </div>
       </header>
 
       {/* Main split layout */}
